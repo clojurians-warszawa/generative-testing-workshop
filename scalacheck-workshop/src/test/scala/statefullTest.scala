@@ -6,26 +6,6 @@ import org.scalatest.prop.GeneratorDrivenPropertyChecks
 
 import scala.util.Try
 
-class statefullTest extends FunSuite with GeneratorDrivenPropertyChecks  with Matchers {
-
-  private val initialProducts = Map(1 -> Product("Coke", 3), 2 -> Product("Pepsi", 2))
-
-  private val initialMachineState = MachineState(
-    internalPocket = Pocket(Nil),
-    temporarilyDepositedPocket = Pocket(Nil),
-    deliveredCoinsPocket = Pocket(Nil),
-    delivered = DeliveryBox(Nil),
-    products = Products(initialProducts))
-
-  test("test") {
-    val m = new Machine(initialMachineState)
-    m.chooseProduct(1)
-    m.insertCoin(Coin())
-    println(m.state)
-
-  }
-}
-
 object CandyMachineProperties extends org.scalacheck.Properties("CommandsLevelDB") {
 
   property("Never breaks.") = CandyMachineSpecification.property()
