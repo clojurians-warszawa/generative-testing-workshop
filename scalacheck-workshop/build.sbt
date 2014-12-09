@@ -10,3 +10,8 @@ resolvers +=
 libraryDependencies ++= Seq("org.scalatest" %% "scalatest" % "2.2.1" % "test")
 
 libraryDependencies ++= Seq("org.scalacheck" %% "scalacheck" % "1.12.1" % "test")
+
+initialCommands in console := """
+                                |import org.scalacheck.Prop.forAll
+                                |import org.scalacheck.Gen
+                                |""".stripMargin
