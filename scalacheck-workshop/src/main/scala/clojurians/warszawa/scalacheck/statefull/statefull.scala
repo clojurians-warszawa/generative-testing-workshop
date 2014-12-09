@@ -7,7 +7,7 @@ case class MachineState(
                          deliveredCoinsPocket: Pocket,
                          delivered: DeliveryBox,
                          products: Products,
-                         chosenProduct: Option[Product] = None)
+                         chosenProductMachineIdOpt: Option[Int] = None)
 case class Products(map: Map[Int, Product])
 case class Product(name: String, value: Int)
 case class Pocket(coins: List[Coin]) {
@@ -15,31 +15,33 @@ case class Pocket(coins: List[Coin]) {
   def addCoins(newCoins: List[Coin]): Pocket = this.copy(coins = newCoins:::coins)
 }
 case class Coin()
-case class DeliveryBox(product: Option[Product])
+case class DeliveryBox(product: List[Product])
 
 class Machine(var state: MachineState) {
+
   def chooseProduct(number: Int) = {
     println("chooseProduct: " + number)
-    state = (state.copy(chosenProduct = Some(state.products.map(number))))
+    state = (state.copy(chosenProductMachineIdOpt = Some(number)))
   }
+
   def insertCoin(coin: Coin) = {
-    state.chosenProduct match {
+    state.chosenProductMachineIdOpt match {
       case None => state = state.copy(deliveredCoinsPocket = state.deliveredCoinsPocket.addCoin(coin))
-      case Some(product) => {
+      case Some(chosenProductMachineId) => {
         state = (state.copy(temporarilyDepositedPocket = state.temporarilyDepositedPocket.addCoin(coin)))
-        if (product.value <= state.temporarilyDepositedPocket.coins.size) {
-          releaseProduct()
+        if (state.products.map(chosenProductMachineId).value <= state.temporarilyDepositedPocket.coins.size) {
+          releaseProduct(chosenProductMachineId)
         }
       }
     }
-
-
   }
+
   def releaseCoins() = state = state.copy(temporarilyDepositedPocket = Pocket(Nil))
 
-  def releaseProduct() = {
-    state = state.copy(temporarilyDepositedPocket = Pocket(Nil), internalPocket = state.internalPocket.addCoins(state.temporarilyDepositedPocket.coins))
+  def releaseProduct(chosenProductMachineId: Int) = {
+    state = state.copy(
+      temporarilyDepositedPocket = Pocket(Nil),
+      internalPocket = state.internalPocket.addCoins(state.temporarilyDepositedPocket.coins))
   }
-
 
 }

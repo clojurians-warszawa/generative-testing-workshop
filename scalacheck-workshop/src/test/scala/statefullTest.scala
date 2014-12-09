@@ -6,48 +6,55 @@ import org.scalatest.prop.GeneratorDrivenPropertyChecks
 
 import scala.util.Try
 
-class statefullTest extends FunSuite with GeneratorDrivenPropertyChecks  with Matchers {
+object CandyMachineProperties extends org.scalacheck.Properties("CandyMachine") {
 
-  test("test") {
-    CandyMachineSpecification.property().check
-  }
+  property("Maintains invariants.") = CandyMachineSpecification.property()
+
 }
-
 
 object CandyMachineSpecification extends org.scalacheck.commands.Commands {
 
-  case class State(n: Int)
+  case class State(machineState: MachineState)
   type Sut = Machine
 
   def destroySut(sut: Sut): Unit = ()
 
   def initialPreCondition(state: State): Boolean = true
 
+  def invariants(state: State): Prop = true
+
   def canCreateNewSut(newState: State, initSuts: Traversable[State], runningSuts: Traversable[Sut]): Boolean =
     true
 
-  def genInitialState: Gen[State] = Gen.oneOf(Seq(CandyMachineSpecification.State(1)))
+  val initialProducts = Map(1 -> Product("Coke", value = 3), 2 -> Product("Pepsi", value = 2))
 
-  def newSut(state: State): Sut = {
-    new Machine(MachineState(
+  val initialMachineState = MachineState(internalPocket = Pocket(Nil),
+       temporarilyDepositedPocket = Pocket(Nil),
+       deliveredCoinsPocket = Pocket(Nil),
+       delivered = DeliveryBox(Nil),
+       products = Products(initialProducts))
 
-      Pocket(Nil),
-      Pocket(Nil),
-      Pocket(Nil),
-      DeliveryBox(None),
-      Products(Map()))
-    )
-  }
+  def genInitialState: Gen[State] = Gen.oneOf(Seq(CandyMachineSpecification.State(initialMachineState)))
 
-  def genCommand(state: State): Gen[Command] = Gen.oneOf(ChooseProduct(1).asInstanceOf[Command], ChooseProduct(2).asInstanceOf[Command])
+  def newSut(state: State): Sut = new Machine(state.machineState)
+
+
+
+  def genCommand(state: State): Gen[Command] =
+    Gen.oneOf(ChooseProduct(1).asInstanceOf[Command], ChooseProduct(2).asInstanceOf[Command])
 
   case class ChooseProduct(number: Int) extends UnitCommand {
 
     def run(sut: Sut): Result = sut.chooseProduct(number)
 
-    def postCondition(state: State, success: Boolean): Prop = success
+    def postCondition(state: State, success: Boolean): Prop = invariants(state) && success
 
-    def nextState(state: State): State = state
+    def nextState(state: State): State = {
+      val sut: Sut = newSut(state)
+      run(sut)
+      state.copy(machineState = sut.state)
+    }
+
     def preCondition(state: State): Boolean = true
   }
 }
