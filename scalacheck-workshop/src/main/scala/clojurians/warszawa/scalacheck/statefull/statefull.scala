@@ -29,7 +29,7 @@ class Machine(var state: MachineState) {
       case Some(product) => {
         state = (state.copy(temporarilyDepositedPocket = state.temporarilyDepositedPocket.addCoin(coin)))
         if (product.value <= state.temporarilyDepositedPocket.coins.size) {
-          releaseProduct()
+          releaseProduct(product)
         }
       }
     }
@@ -38,10 +38,11 @@ class Machine(var state: MachineState) {
   }
   def releaseCoins() = state = state.copy(temporarilyDepositedPocket = Pocket(Nil))
 
-  def releaseProduct() = {
+  def releaseProduct(product: Product) = {
     state = state.copy(
       temporarilyDepositedPocket = Pocket(Nil),
-      internalPocket = state.internalPocket.addCoins(state.temporarilyDepositedPocket.coins))
+      internalPocket = state.internalPocket.addCoins(state.temporarilyDepositedPocket.coins),
+      delivered = DeliveryBox(product::state.delivered.products))
   }
 
 
