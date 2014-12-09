@@ -28,6 +28,7 @@ class Machine(var state: MachineState) {
   }
 
   def insertCoin(coin: Coin) = {
+    println("insertCoin")
     state.chosenProductMachineIdOpt match {
       case None => state = state.copy(deliveredCoinsPocket = state.deliveredCoinsPocket.addCoin(coin))
       case Some(chosenProductMachineId) => {
@@ -43,6 +44,7 @@ class Machine(var state: MachineState) {
 
   def releaseProduct(productMachineId: Int) = {
     val product: Product = state.products.map(productMachineId)
+    println("releasing: " + productMachineId)
     state = state.copy(
       temporarilyDepositedPocket = Pocket(Nil),
       internalPocket = state.internalPocket.addCoins(state.temporarilyDepositedPocket.coins),

@@ -1,5 +1,6 @@
 import clojurians.warszawa.scalacheck.statefull._
-import org.scalacheck.{Prop, Gen}
+import org.scalacheck.Test.TestCallback
+import org.scalacheck.{Test, Prop, Gen}
 import org.scalatest.FunSuite
 import org.scalatest.Matchers
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
@@ -8,13 +9,22 @@ import scala.util.Try
 
 object CandyMachineProperties extends org.scalacheck.Properties("CommandsLevelDB") {
 
-  property("Never breaks.") = CandyMachineSpecification.property()
+  CandyMachineSpecification.property().check(new Test.Parameters {
+    val minSuccessfulTests: Int = 10000
+    val minSize: Int = 0
+    val maxSize: Int = Gen.Parameters.default.size
+    val rng: scala.util.Random = Gen.Parameters.default.rng
+    val workers: Int = 1
+    val testCallback: TestCallback = new TestCallback {}
+    val maxDiscardRatio: Float = 5
+    val customClassLoader: Option[ClassLoader] = None
+  })
 
 }
 
 object CandyMachineSpecification extends org.scalacheck.commands.Commands {
 
-  case class State(machineState: MachineState, nInsertedCoins: Int)
+  case class State(machineState: MachineState, initialProducts: Map[Int, Product], nInsertedCoins: Int)
   type Sut = Machine
 
   def destroySut(sut: Sut): Unit = ()
@@ -23,11 +33,11 @@ object CandyMachineSpecification extends org.scalacheck.commands.Commands {
 
   def invariants(state: State) = {
     val machineState = state.machineState
-    val b1 = machineState.products.map.size + machineState.delivered.products.size == initialProducts.size
+    val b1 = machineState.products.map.size + machineState.delivered.products.size == state.initialProducts.size
     val b2 = machineState.delivered.products.map(_.value).sum == machineState.internalPocket.coins.size
     val b3 = machineState.internalPocket.coins.size + machineState.deliveredCoinsPocket.coins.size + machineState.temporarilyDepositedPocket.coins.size == state.nInsertedCoins
 
-    Prop(b1) :| "Number of products in the environment is constant" &&
+    Prop(b1) :| s"Number of products in the environment is constant: ${machineState.products.map.size} + ${machineState.delivered.products.size} = ${state.initialProducts.size}" &&
       Prop(b2) :| "Number of coins in the machine internalPocket is equal to value of products delivered" &&
       Prop(b3) :| "Sum of number of coins in the machine (in all pockets) is equal to number of coins inserted into the machine"
   }
@@ -35,24 +45,29 @@ object CandyMachineSpecification extends org.scalacheck.commands.Commands {
   def canCreateNewSut(newState: State, initSuts: Traversable[State], runningSuts: Traversable[Sut]): Boolean =
     true
 
-  private val initialProducts = Map(1 -> Product("Coke", 3), 2 -> Product("Pepsi", 2))
+  def initialProductsGen: Gen[Map[Int,Product]] = Gen.mapOf[Int, Product](for (key <- Gen.posNum[Byte].map(_.toInt);
+                                product <- productGen) yield (key, product))
 
-  private val initialMachineState = MachineState(
-    internalPocket = Pocket(Nil),
-    temporarilyDepositedPocket = Pocket(Nil),
-    deliveredCoinsPocket = Pocket(Nil),
-    delivered = DeliveryBox(Nil),
-    products = Products(initialProducts))
+  private val initialMachineStateGen = for (initialProducts <- initialProductsGen) yield
+    MachineState(
+      internalPocket = Pocket(Nil),
+      temporarilyDepositedPocket = Pocket(Nil),
+      deliveredCoinsPocket = Pocket(Nil),
+      delivered = DeliveryBox(Nil),
+      products = Products(initialProducts))
 
-  def genInitialState: Gen[State] = Gen.oneOf(Seq(CandyMachineSpecification.State(initialMachineState, 0)))
+  def genInitialState: Gen[State] = for (initialMachineState <- initialMachineStateGen) yield
+    CandyMachineSpecification.State(initialMachineState, initialMachineState.products.map, 0)
 
   def newSut(state: State): Sut = new Machine(state.machineState)
 
 
-  def genCommand(state: State): Gen[Command] =
-    Gen.frequency(
-      (1, Gen.const(ChooseProduct(1).asInstanceOf[Command])),
-      (2, Gen.const(InsertCoin().asInstanceOf[Command])))
+  def genCommand(state: State): Gen[Command] = {
+    val keys = state.initialProducts.keys.toList
+
+    Gen.frequency((keys.size * 5, Gen.const(InsertCoin().asInstanceOf[Command]))::
+      keys.map(ChooseProduct).map(x => (1, Gen.const(x.asInstanceOf[Command]))): _*)
+  }
 
 
   case class ChooseProduct(number: Int) extends  UnitCommand {
@@ -79,10 +94,14 @@ object CandyMachineSpecification extends org.scalacheck.commands.Commands {
     def nextState(state: State): State = {
       val sut: Sut = newSut(state)
       run(sut)
-      State(sut.state, nInsertedCoins = state.nInsertedCoins + 1)
+      state.copy(sut.state, nInsertedCoins = state.nInsertedCoins + 1)
     }
 
     def preCondition(state: State): Boolean = true
+  }
+
+  def productGen: Gen[Product] = {
+    for (name <- Gen.alphaStr; value <- Gen.chooseNum(1, 10)) yield Product(name, value)
   }
 
 

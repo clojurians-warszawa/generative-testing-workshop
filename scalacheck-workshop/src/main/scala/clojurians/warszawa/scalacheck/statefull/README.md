@@ -30,18 +30,27 @@ seqcmds = (ChooseProduct(1); InsertCoin(); InsertCoin(); InsertCoin(); Choo
 
  4. a) Implement your second `Prop`:
 ```state.machineState.products.map.size + state.machineState.delivered.products.size == initialProducts.size```
+    Don't forget to label your new invariant (see `Labeling Properties` at https://github.com/rickynils/scalacheck/wiki/User-Guide)
+
     b) fix the implementation of `Machine.releaseProduct()` method
     c) you should now see sth like:
 ```
-    ! CommandsLevelDB.Never breaks.: Exception raised on property evaluation.
+    ! CommandsLevelDB.Invariants maintained.: Exception raised on property evaluation.
     > Exception: java.util.NoSuchElementException: key not found: 1
 ```
 
+
 5. Fix `Machine.releaseProduct()` and `Machine.chooseProduct()`
 
-6. So far we have been generating the commands in a somewhat naive way. Let's change that.
+6. So far we have been generating the commands in a somewhat naive way. Let's change that!
 a) modify `genCommand` in such a way that choosing Product 2 is possible.
 b) fix implementation
-c) Create a generator for a Product
+c) Create a generator for a `Product` with name being alpha characters and value being a positive integer lower then 10
+d) Use this generator to generate `initialProducts`
+  Hint: you will need to modify the `CandyMachineSpecificationState` class
+e) modify `genCommand` so that any product from `initialProducts` can be chosen.
+f) use `Gen.frequency` to generate 5 times more insertCoin commands then chooseProduct commands.
 
-7. [optional] add property verifying that number of coins in the environment does not change (hint: add "nInsertedCoins: Int" to state)
+7. change number of run tests to 10000
+
+8. [optional] add property verifying that number of coins in the environment does not change (hint: add "nInsertedCoins: Int" to state)
