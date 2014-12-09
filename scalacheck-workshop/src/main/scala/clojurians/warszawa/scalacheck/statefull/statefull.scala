@@ -23,6 +23,7 @@ class Machine(var state: MachineState) {
     state = (state.copy(chosenProduct = Some(state.products.map(number))))
   }
   def insertCoin(coin: Coin) = {
+    println("insertCoin: " + coin)
     state.chosenProduct match {
       case None => state = state.copy(deliveredCoinsPocket = state.deliveredCoinsPocket.addCoin(coin))
       case Some(product) => {
