@@ -34,14 +34,15 @@ object CandyMachineProperties extends org.scalacheck.Properties("CommandsLevelDB
 
 object CandyMachineSpecification extends org.scalacheck.commands.Commands {
 
-  case class State(machineState: MachineState)
+  case class State(machineState: MachineState, nInsertedCoins: Int)
   type Sut = Machine
 
   def destroySut(sut: Sut): Unit = ()
 
   def initialPreCondition(state: State): Boolean = true
 
-  def invariants(machineState: MachineState) = {
+  def invariants(state: State) = {
+    val machineState = state.machineState
     val b1 = machineState.products.map.size + machineState.delivered.products.size == initialProducts.size
     if (!b1)
       println("products: " + machineState.products.map.values + " + " + machineState.delivered.products + " = " + initialProducts)
@@ -49,7 +50,12 @@ object CandyMachineSpecification extends org.scalacheck.commands.Commands {
     val b2 = machineState.delivered.products.map(_.value).sum == machineState.internalPocket.coins.size
     if (!b2)
       println("coins: " + machineState.delivered.products.map(_.value).sum + " = " + machineState.internalPocket.coins.size)
-    Prop(b1) && Prop(b2)
+
+
+    val b3 = machineState.internalPocket.coins.size + machineState.deliveredCoinsPocket.coins.size + machineState.temporarilyDepositedPocket.coins.size == state.nInsertedCoins
+    if (!b3)
+      println("coins2: " + machineState.internalPocket.coins.size + "+" + machineState.deliveredCoinsPocket.coins.size + "+" + machineState.temporarilyDepositedPocket.coins.size + "==" + state.nInsertedCoins)
+    Prop(b1) && Prop(b2) && Prop(b3)
   }
 
   def canCreateNewSut(newState: State, initSuts: Traversable[State], runningSuts: Traversable[Sut]): Boolean =
@@ -64,7 +70,7 @@ object CandyMachineSpecification extends org.scalacheck.commands.Commands {
     delivered = DeliveryBox(Nil),
     products = Products(initialProducts))
 
-  def genInitialState: Gen[State] = Gen.oneOf(Seq(CandyMachineSpecification.State(initialMachineState)))
+  def genInitialState: Gen[State] = Gen.oneOf(Seq(CandyMachineSpecification.State(initialMachineState, 0)))
 
   def newSut(state: State): Sut = new Machine(state.machineState)
 
@@ -79,30 +85,29 @@ object CandyMachineSpecification extends org.scalacheck.commands.Commands {
 
     def run(sut: Sut): Result = sut.chooseProduct(number)
 
-    def postCondition(state: State, success: Boolean): Prop = invariants(state.machineState) && success
+    def postCondition(state: State, success: Boolean): Prop = invariants(state) && success
 
     def nextState(state: State): State = {
       val sut: Sut = newSut(state)
       run(sut)
       println("nextState " + sut.state)
-      State(sut.state)
+      state.copy(machineState = sut.state)
     }
 
     def preCondition(state: State): Boolean = true
-
   }
 
   case class InsertCoin() extends UnitCommand {
     def run(sut: Sut): Result = sut.insertCoin(Coin())
 
-    def postCondition(state: State, success: Boolean): Prop = invariants(state.machineState) && success
+    def postCondition(state: State, success: Boolean): Prop = invariants(state) && success
 
 
     def nextState(state: State): State = {
       val sut: Sut = newSut(state)
       run(sut)
       println("nextState " + sut.state)
-      State(sut.state)
+      State(sut.state, nInsertedCoins = state.nInsertedCoins + 1)
     }
 
     def preCondition(state: State): Boolean = true
