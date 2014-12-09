@@ -24,18 +24,12 @@ object CandyMachineSpecification extends org.scalacheck.commands.Commands {
   def invariants(state: State) = {
     val machineState = state.machineState
     val b1 = machineState.products.map.size + machineState.delivered.products.size == initialProducts.size
-    if (!b1)
-      println("products: " + machineState.products.map.values + " + " + machineState.delivered.products + " = " + initialProducts)
-
     val b2 = machineState.delivered.products.map(_.value).sum == machineState.internalPocket.coins.size
-    if (!b2)
-      println("coins: " + machineState.delivered.products.map(_.value).sum + " = " + machineState.internalPocket.coins.size)
-
-
     val b3 = machineState.internalPocket.coins.size + machineState.deliveredCoinsPocket.coins.size + machineState.temporarilyDepositedPocket.coins.size == state.nInsertedCoins
-    if (!b3)
-      println("coins2: " + machineState.internalPocket.coins.size + "+" + machineState.deliveredCoinsPocket.coins.size + "+" + machineState.temporarilyDepositedPocket.coins.size + "==" + state.nInsertedCoins)
-    Prop(b1) && Prop(b2) && Prop(b3)
+
+    Prop(b1) :| "Number of products in the environment is constant" &&
+      Prop(b2) :| "Number of coins in the machine internalPocket is equal to value of products delivered" &&
+      Prop(b3) :| "Sum of number of coins in the machine (in all pockets) is equal to number of coins inserted into the machine"
   }
 
   def canCreateNewSut(newState: State, initSuts: Traversable[State], runningSuts: Traversable[Sut]): Boolean =
@@ -70,7 +64,6 @@ object CandyMachineSpecification extends org.scalacheck.commands.Commands {
     def nextState(state: State): State = {
       val sut: Sut = newSut(state)
       run(sut)
-      println("nextState " + sut.state)
       state.copy(machineState = sut.state)
     }
 
@@ -86,7 +79,6 @@ object CandyMachineSpecification extends org.scalacheck.commands.Commands {
     def nextState(state: State): State = {
       val sut: Sut = newSut(state)
       run(sut)
-      println("nextState " + sut.state)
       State(sut.state, nInsertedCoins = state.nInsertedCoins + 1)
     }
 

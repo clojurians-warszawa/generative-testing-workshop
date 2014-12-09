@@ -39,4 +39,7 @@ seqcmds = (ChooseProduct(1); InsertCoin(); InsertCoin(); InsertCoin(); Choo
 
 5. Fix `Machine.releaseProduct()` and `Machine.chooseProduct()`
 
-6. [optional] add property verifying that number of coins in the environment does not change (hint: add "nInsertedCoins: Int" to state)
+6. So far we have been generating the commands in a somewhat naive way. Let's change that.
+a)
+
+7. [optional] add property verifying that number of coins in the environment does not change (hint: add "nInsertedCoins: Int" to state)
