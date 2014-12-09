@@ -40,6 +40,8 @@ seqcmds = (ChooseProduct(1); InsertCoin(); InsertCoin(); InsertCoin(); Choo
 5. Fix `Machine.releaseProduct()` and `Machine.chooseProduct()`
 
 6. So far we have been generating the commands in a somewhat naive way. Let's change that.
-a)
+a) modify `genCommand` in such a way that choosing Product 2 is possible.
+b) fix implementation
+c) Create a generator for a Product
 
 7. [optional] add property verifying that number of coins in the environment does not change (hint: add "nInsertedCoins: Int" to state)

@@ -21,9 +21,10 @@ class Machine(var state: MachineState) {
 
   def chooseProduct(number: Int) = {
     println("chooseProduct: " + number)
-    if (state.products.map.keys.toSet.contains(number)) {
+    if (state.products.map.keys.toSet.contains(number) && state.chosenProductMachineIdOpt == None) {
       state = (state.copy(chosenProductMachineIdOpt = Some(number)))
     }
+
   }
 
   def insertCoin(coin: Coin) = {
