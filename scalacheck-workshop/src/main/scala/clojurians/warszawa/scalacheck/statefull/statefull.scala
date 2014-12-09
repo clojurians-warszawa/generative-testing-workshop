@@ -7,7 +7,7 @@ case class MachineState(
                          deliveredCoinsPocket: Pocket,
                          delivered: DeliveryBox,
                          products: Products,
-                         chosenProduct: Option[Product] = None)
+                         chosenProduct: Option[Int] = None)
 case class Products(map: Map[Int, Product])
 case class Product(name: String, value: Int)
 case class Pocket(coins: List[Coin]) {
@@ -20,16 +20,19 @@ case class DeliveryBox(products: List[Product])
 class Machine(var state: MachineState) {
   def chooseProduct(number: Int) = {
     println("chooseProduct: " + number)
-    state = (state.copy(chosenProduct = Some(state.products.map(number))))
+    if (state.products.map.keys.toSet.contains(number)) {
+      state = (state.copy(chosenProduct = Some(number)))
+    }
   }
+
   def insertCoin(coin: Coin) = {
     println("insertCoin: " + coin)
     state.chosenProduct match {
       case None => state = state.copy(deliveredCoinsPocket = state.deliveredCoinsPocket.addCoin(coin))
-      case Some(product) => {
+      case Some(productMachineId) => {
         state = (state.copy(temporarilyDepositedPocket = state.temporarilyDepositedPocket.addCoin(coin)))
-        if (product.value <= state.temporarilyDepositedPocket.coins.size) {
-          releaseProduct(product)
+        if (state.products.map(productMachineId).value <= state.temporarilyDepositedPocket.coins.size) {
+          releaseProduct(productMachineId)
         }
       }
     }
@@ -38,11 +41,14 @@ class Machine(var state: MachineState) {
   }
   def releaseCoins() = state = state.copy(temporarilyDepositedPocket = Pocket(Nil))
 
-  def releaseProduct(product: Product) = {
+  def releaseProduct(productMachineId: Int) = {
+    val product: Product = state.products.map(productMachineId)
     state = state.copy(
       temporarilyDepositedPocket = Pocket(Nil),
       internalPocket = state.internalPocket.addCoins(state.temporarilyDepositedPocket.coins),
-      delivered = DeliveryBox(product::state.delivered.products))
+      delivered = DeliveryBox(product::state.delivered.products),
+      products = state.products.copy(state.products.map.filterKeys(_ != productMachineId)),
+      chosenProduct = None)
   }
 
 

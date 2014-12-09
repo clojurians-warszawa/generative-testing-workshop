@@ -42,10 +42,14 @@ object CandyMachineSpecification extends org.scalacheck.commands.Commands {
   def initialPreCondition(state: State): Boolean = true
 
   def invariants(machineState: MachineState) = {
+    val b1 = machineState.products.map.size + machineState.delivered.products.size == initialProducts.size
+    if (!b1)
+      println("products: " + machineState.products.map.values + " + " + machineState.delivered.products + " = " + initialProducts)
+
     val b2 = machineState.delivered.products.map(_.value).sum == machineState.internalPocket.coins.size
     if (!b2)
       println("coins: " + machineState.delivered.products.map(_.value).sum + " = " + machineState.internalPocket.coins.size)
-    Prop(b2)
+    Prop(b1) && Prop(b2)
   }
 
   def canCreateNewSut(newState: State, initSuts: Traversable[State], runningSuts: Traversable[Sut]): Boolean =
@@ -85,6 +89,7 @@ object CandyMachineSpecification extends org.scalacheck.commands.Commands {
     }
 
     def preCondition(state: State): Boolean = true
+
   }
 
   case class InsertCoin() extends UnitCommand {
