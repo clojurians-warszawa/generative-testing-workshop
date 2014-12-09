@@ -15,7 +15,7 @@ case class Pocket(coins: List[Coin]) {
   def addCoins(newCoins: List[Coin]): Pocket = this.copy(coins = newCoins:::coins)
 }
 case class Coin()
-case class DeliveryBox(product: Option[Product])
+case class DeliveryBox(products: List[Product])
 
 class Machine(var state: MachineState) {
   def chooseProduct(number: Int) = {
@@ -39,7 +39,9 @@ class Machine(var state: MachineState) {
   def releaseCoins() = state = state.copy(temporarilyDepositedPocket = Pocket(Nil))
 
   def releaseProduct() = {
-    state = state.copy(temporarilyDepositedPocket = Pocket(Nil), internalPocket = state.internalPocket.addCoins(state.temporarilyDepositedPocket.coins))
+    state = state.copy(
+      temporarilyDepositedPocket = Pocket(Nil),
+      internalPocket = state.internalPocket.addCoins(state.temporarilyDepositedPocket.coins))
   }
 
 

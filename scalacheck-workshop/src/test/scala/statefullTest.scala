@@ -6,13 +6,25 @@ import org.scalatest.prop.GeneratorDrivenPropertyChecks
 
 import scala.util.Try
 
-//class statefullTest extends FunSuite with GeneratorDrivenPropertyChecks  with Matchers {
-//
-//  test("test") {
-//    CandyMachineSpecification.property().check
-//
-//  }
-//}
+class statefullTest extends FunSuite with GeneratorDrivenPropertyChecks  with Matchers {
+
+  private val initialProducts = Map(1 -> Product("Coke", 3), 2 -> Product("Pepsi", 2))
+
+  private val initialMachineState = MachineState(
+    internalPocket = Pocket(Nil),
+    temporarilyDepositedPocket = Pocket(Nil),
+    deliveredCoinsPocket = Pocket(Nil),
+    delivered = DeliveryBox(Nil),
+    products = Products(initialProducts))
+
+  test("test") {
+    val m = new Machine(initialMachineState)
+    m.chooseProduct(1)
+    m.insertCoin(Coin())
+    println(m.state)
+
+  }
+}
 
 object CandyMachineProperties extends org.scalacheck.Properties("CommandsLevelDB") {
 
@@ -22,30 +34,38 @@ object CandyMachineProperties extends org.scalacheck.Properties("CommandsLevelDB
 
 object CandyMachineSpecification extends org.scalacheck.commands.Commands {
 
-  case class State()
+  case class State(machineState: MachineState)
   type Sut = Machine
 
   def destroySut(sut: Sut): Unit = ()
 
   def initialPreCondition(state: State): Boolean = true
 
+  def invariants(machineState: MachineState) = {
+    val b2 = machineState.delivered.products.map(_.value).sum == machineState.internalPocket.coins.size
+    if (!b2)
+      println("coins: " + machineState.delivered.products.map(_.value).sum + " = " + machineState.internalPocket.coins.size)
+    Prop(b2)
+  }
+
   def canCreateNewSut(newState: State, initSuts: Traversable[State], runningSuts: Traversable[Sut]): Boolean =
     true
 
-  def genInitialState: Gen[State] = Gen.oneOf(Seq(CandyMachineSpecification.State()))
+  private val initialProducts = Map(1 -> Product("Coke", 3), 2 -> Product("Pepsi", 2))
 
-  def newSut(state: State): Sut = {
-    new Machine(MachineState(
+  private val initialMachineState = MachineState(
+    internalPocket = Pocket(Nil),
+    temporarilyDepositedPocket = Pocket(Nil),
+    deliveredCoinsPocket = Pocket(Nil),
+    delivered = DeliveryBox(Nil),
+    products = Products(initialProducts))
 
-      internalPocket = Pocket(Nil),
-      temporarilyDepositedPocket = Pocket(Nil),
-      deliveredCoinsPocket = Pocket(Nil),
-      delivered = DeliveryBox(None),
-      products = Products(Map(1 -> Product("Coke", 3), 2 -> Product("Pepsi", 2))))
-    )
-  }
+  def genInitialState: Gen[State] = Gen.oneOf(Seq(CandyMachineSpecification.State(initialMachineState)))
 
-  def C(state: State): Gen[Command] =
+  def newSut(state: State): Sut = new Machine(state.machineState)
+
+
+  def genCommand(state: State): Gen[Command] =
     Gen.frequency(
       (1, Gen.const(ChooseProduct(1).asInstanceOf[Command])),
       (2, Gen.const(InsertCoin().asInstanceOf[Command])))
@@ -55,18 +75,33 @@ object CandyMachineSpecification extends org.scalacheck.commands.Commands {
 
     def run(sut: Sut): Result = sut.chooseProduct(number)
 
-    def postCondition(state: State, success: Boolean): Prop = success
+    def postCondition(state: State, success: Boolean): Prop = invariants(state.machineState) && success
 
-    def nextState(state: State): State = state
+    def nextState(state: State): State = {
+      val sut: Sut = newSut(state)
+      run(sut)
+      println("nextState " + sut.state)
+      State(sut.state)
+    }
+
     def preCondition(state: State): Boolean = true
   }
 
   case class InsertCoin() extends UnitCommand {
     def run(sut: Sut): Result = sut.insertCoin(Coin())
 
-    def postCondition(state: State, success: Boolean): Prop = success
+    def postCondition(state: State, success: Boolean): Prop = invariants(state.machineState) && success
 
-    def nextState(state: State): State = state
+
+    def nextState(state: State): State = {
+      val sut: Sut = newSut(state)
+      run(sut)
+      println("nextState " + sut.state)
+      State(sut.state)
+    }
+
     def preCondition(state: State): Boolean = true
   }
+
+
 }
