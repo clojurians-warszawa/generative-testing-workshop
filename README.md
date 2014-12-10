@@ -1,6 +1,4 @@
 Generative testing workshop
 ===========================
 
-For Scala, see the Scalacheck wiki page.
-
-For Clojure, see the test.check wiki page.
+See [wiki pages](https://github.com/clojurians-warszawa/generative-testing-workshop/wiki)
