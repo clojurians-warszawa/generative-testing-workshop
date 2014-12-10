@@ -1,0 +1,7 @@
+target
+*.swp
+*.swo
+.idea
+.lein-failures
+.lein-repl-history
+.env
